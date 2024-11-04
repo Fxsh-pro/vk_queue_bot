@@ -61,7 +61,7 @@ class VkBot : LongPollBot() {
                 if (message.hasText()) {
                     val text = message.text
                     when {
-                        text.startsWith("queue start ") -> {
+                        text.startsWith("queue start ", ignoreCase = true) -> {
                             val queueName = text.substringAfter("queue start ").trim()
                             startQueue(queueName, message.peerId)
                         }
