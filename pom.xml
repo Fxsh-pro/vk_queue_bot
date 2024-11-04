@@ -1,0 +1,112 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.edu.bot</groupId>
+    <artifactId>bott</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <packaging>jar</packaging>
+
+    <properties>
+<!--        <jooq.version>3.18.9</jooq.version>-->
+        <jooq.version>3.10.7</jooq.version>
+        <jooq.flyway.code.generation.db.url>jdbc:h2:~/jooq_gen;MODE=PostgreSql</jooq.flyway.code.generation.db.url>
+        <jooq.flyway.code.generation.db.username>sa</jooq.flyway.code.generation.db.username>
+        <h2.version>1.4.178</h2.version>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <url>${jooq.flyway.code.generation.db.url}</url>
+                    <user>${jooq.flyway.code.generation.db.username}</user>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq-codegen-maven</artifactId>
+                <version>${jooq.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.h2database</groupId>
+                        <artifactId>h2</artifactId>
+                        <version>${h2.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                        <version>2.3.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>com.sun.activation</groupId>
+                        <artifactId>javax.activation</artifactId>
+                        <version>1.2.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.glassfish.jaxb</groupId>
+                        <artifactId>jaxb-runtime</artifactId>
+                        <version>2.3.2</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <jdbc>
+                        <url>${jooq.flyway.code.generation.db.url}</url>
+                        <user>${jooq.flyway.code.generation.db.username}</user>
+                    </jdbc>
+                    <generator>
+                        <database>
+                            <includes>.*</includes>
+                            <inputSchema>PUBLIC</inputSchema>
+                            <excludes>
+                                QRTZ_.*
+                                | SYSTEM_SEQUENCE_.*
+                                | TEST_.*
+                            </excludes>
+                        </database>
+                        <target>
+                            <packageName>com.vk.queuebot.domain.db</packageName>
+                            <directory>src/main/kotlin</directory>
+                        </target>
+                        <generate>
+                            <deprecated>false</deprecated>
+                        </generate>
+                    </generator>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <configuration>
+                    <executable>mvn</executable>
+                    <arguments>
+                        <argument>flyway:clean</argument>
+                        <argument>flyway:init</argument>
+                        <argument>flyway:migrate</argument>
+                        <argument>jooq-codegen:generate</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
