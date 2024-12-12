@@ -19,10 +19,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.springframework.stereotype.Service
+import java.util.Locale
 
 @Service
 class VkBot : LongPollBot() {
-
+    val oldGod = setOf("Старый бог", "OLD GOD")
     @PostConstruct
     fun t() {
         this.startPolling()
@@ -59,11 +60,17 @@ class VkBot : LongPollBot() {
             try {
                 val message = messageNew.message
                 if (message.hasText()) {
-                    val text = message.text
+                    val text = message.text.lowercase(Locale.getDefault())
                     when {
-                        text.startsWith("queue start ", ignoreCase = true) -> {
-                            val queueName = text.substringAfter("queue start ").trim()
+                        text.startsWith("start queue", ignoreCase = true) -> {
+                            val queueName = text.substringAfter("start queue ").trim()
                             startQueue(queueName, message.peerId)
+                        }
+                        text in oldGod -> {
+                            vk.messages.send()
+                                .setPeerIds(message.peerId)
+                                .setMessage("Cтарый бог!")
+                                .execute()
                         }
                     }
                 }
