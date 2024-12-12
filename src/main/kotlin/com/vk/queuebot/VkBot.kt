@@ -23,7 +23,7 @@ import java.util.Locale
 
 @Service
 class VkBot : LongPollBot() {
-    val oldGod = setOf("Старый бог", "OLD GOD")
+    val oldGod = setOf("cтарый бог", "old god")
     @PostConstruct
     fun t() {
         this.startPolling()
