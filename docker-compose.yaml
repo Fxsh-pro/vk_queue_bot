@@ -16,6 +16,7 @@ services:
       DATASOURCE_URL: ${DATASOURCE_URL}
       DATASOURCE_USER: ${POSTGRES_USER}
       DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      ADMIN_IDS: ${ADMIN_IDS}
     links:
       - "db:db"
     ports:

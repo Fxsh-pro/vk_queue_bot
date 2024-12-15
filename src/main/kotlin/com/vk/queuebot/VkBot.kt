@@ -18,19 +18,55 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @Service
-class VkBot : LongPollBot() {
-    val oldGod = setOf("cтарый бог", "old god")
+class VkBot(
+    @Value("\${admin.ids:332517068}")
+    private val adminIds: Set<Int>
+) : LongPollBot() {
+    companion object {
+        private val OLD_GOD = listOf("старый бог", "old god")
+        private val START_TEXT = listOf("start queue", "s t", "st")
+        private val LOG = LoggerFactory.getLogger(VkBot::class.java)
+    }
+
     @PostConstruct
     fun t() {
+        LOG.info("adminIds: $adminIds")
+        executor.scheduleAtFixedRate(
+            {
+                GlobalScope.launch(Dispatchers.IO) {
+                    task()
+                }
+            },
+            0,
+            1,
+            TimeUnit.HOURS
+        )
         this.startPolling()
-
     }
+
+    suspend fun task() {
+        val now = LocalDateTime.now()
+        if (now.hour == 23) {
+            mutex.withLock {
+                queues.clear()
+            }
+            LOG.info("queue cleared at $now")
+        }
+    }
+
     private val queues = mutableMapOf<String, MutableList<Int>>()
     private val mutex = Mutex()
+    private var muteIvan = true
+    private val executor = Executors.newScheduledThreadPool(1)
 
     override fun onUnknownObject(unknownObject: Update.UnknownObject) {
         println(unknownObject)
@@ -60,19 +96,15 @@ class VkBot : LongPollBot() {
             try {
                 val message = messageNew.message
                 if (message.hasText()) {
-                    val text = message.text.lowercase(Locale.getDefault())
-                    when {
-                        text.startsWith("start queue", ignoreCase = true) -> {
-                            val queueName = text.substringAfter("start queue ").trim()
-                            startQueue(queueName, message.peerId)
-                        }
-                        text in oldGod -> {
-                            vk.messages.send()
-                                .setPeerIds(message.peerId)
-                                .setMessage("Cтарый бог!")
-                                .execute()
-                        }
-                    }
+                    val messageDto = MessageDto(
+                        text = message.text,
+                        peerId = message.peerId,
+                        fromId = message.fromId,
+                        date = message.date,
+                        id = message.conversationMessageId,
+                    )
+                    LOG.info("Received: $messageDto")
+                    handleMessage(messageDto)
                 }
             } catch (e: VkApiException) {
                 e.printStackTrace()
@@ -80,7 +112,42 @@ class VkBot : LongPollBot() {
         }
     }
 
-    private fun startQueue(queueName: String, peerId: Int) {
+    data class MessageDto(
+        val text: String,
+        val peerId: Int,
+        val fromId: Int,
+        val date: Int,
+        val id: Int,
+    )
+
+    private fun handleMessage(message: MessageDto) {
+        val text = message.text.lowercase(Locale.getDefault()).trim()
+        val currentStart = START_TEXT.filter { text.startsWith(it) }
+        when {
+            currentStart.isNotEmpty() -> {
+                val queueName = text.substringAfter(currentStart[0]).trim()
+                startQueue(queueName, message.peerId)
+            }
+
+            OLD_GOD.any { it in text } -> {
+                vk.messages.send().setMessage("Старый бог!").setPeerId(message.peerId).execute()
+            }
+
+            message.fromId in adminIds && (text == "on" || text == "off") -> {
+                muteIvan = text == "on"
+                vk.messages.send().setMessage("Ivan is muted = $muteIvan").setPeerId(message.peerId).execute()
+            }
+
+            muteIvan && message.fromId == 176065807 -> {
+                vk.messages.send().setMessage("Тебе слова не давали").setPeerId(message.peerId).execute()
+            }
+        }
+    }
+
+    // Received: MessageDto(text=Хуй, peerId=2000000001, fromId=176065807, date=1734270149)
+    // 2024-12-15T16:42:35.592+03:00  INFO 85990 --- [queueBot] [atcher-worker-1] com.vk.queuebot.VkBot                    : Received: MessageDto(text=Old god, peerId=2000000001, fromId=176065807, date=1734270154)
+
+    fun startQueue(queueName: String, peerId: Int) {
         if (!queues.containsKey(queueName)) {
             // Create buttons using a helper method
             val response2 = "Queue '$queueName' started! Click the buttons (one sec) to join or leave."
