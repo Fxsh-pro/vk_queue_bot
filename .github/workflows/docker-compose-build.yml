@@ -33,7 +33,7 @@ jobs:
       # Step 4: Build Docker Compose application
       - name: Build Docker Compose services
         run: |
-          docker-compose -f docker-compose.yaml build
+          docker compose -f docker-compose.yaml build
 
 #      # Step 5: Run tests (if applicable)
 #      - name: Run Tests
