@@ -1,0 +1,50 @@
+name: Docker Compose Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Test Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Docker Buildx (for cross-platform builds, optional)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+#      # Step 3: Log in to DockerHub (optional, if you push to DockerHub)
+#      # Replace DOCKER_USERNAME and DOCKER_PASSWORD with your GitHub Secrets.
+#      - name: Log in to DockerHub
+#        uses: docker/login-action@v2
+#        with:
+#          username: ${{ secrets.DOCKER_USERNAME }}
+#          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 4: Build Docker Compose application
+      - name: Build Docker Compose services
+        run: |
+          docker-compose -f docker-compose.yaml build
+
+#      # Step 5: Run tests (if applicable)
+#      - name: Run Tests
+#        run: |
+#          docker-compose -f docker-compose.yaml up -d
+#          # Add additional test commands here
+#          docker-compose -f docker-compose.yaml logs
+#          docker-compose -f docker-compose.yaml down
+
+#      # Step 6 (Optional): Push Docker Images to DockerHub (or other registry)
+#      # Add this step if you want to push built images to DockerHub
+#      - name: Push Docker Images
+#        run: |
+#          docker-compose -f docker-compose.yaml push
